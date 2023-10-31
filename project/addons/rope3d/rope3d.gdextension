@@ -1,0 +1,20 @@
+[configuration]
+
+entry_symbol = "rope3d_library_init"
+compatibility_minimum = 4.1
+
+[icons]
+Rope3D = "res://addons/rope3d/icons/TrailEmitter.svg"
+
+[libraries]
+
+macos.debug = "bin/librope3d.macos.debug.framework"
+macos.release = "bin/librope3d.macos.release.framework"
+windows.debug.x86_64 = "bin/librope3d.windows.debug.x86_64.dll"
+windows.release.x86_64 = "bin/librope3d.windows.release.x86_64.dll"
+linux.debug.x86_64 = "bin/librope3d.linux.debug.x86_64.so"
+linux.release.x86_64 = "bin/librope3d.linux.release.x86_64.so"
+linux.debug.arm64 = "bin/librope3d.linux.debug.arm64.so"
+linux.release.arm64 = "bin/librope3d.linux.release.arm64.so"
+linux.debug.rv64 = "bin/librope3d.linux.debug.rv64.so"
+linux.release.rv64 = "bin/librope3d.linux.release.rv64.so"
