@@ -12,6 +12,9 @@ namespace godot {
 
 		private:
 
+			int collision_layer;
+			int collision_mask;
+
 		protected:
 			static void _bind_methods();
 			void initialize_arrays();
@@ -19,6 +22,12 @@ namespace godot {
 		public:
 			Rope3D();
 			~Rope3D();
+
+			void set_collision_mask(int value);
+			int get_collision_mask() const;
+
+			void set_collision_layer(int value);
+			int get_collision_layer() const;
 
 			void _ready() override;
 			void _process(double delta) override;
