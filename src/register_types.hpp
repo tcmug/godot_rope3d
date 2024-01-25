@@ -4,4 +4,4 @@
 void initialize_roped3_module();
 void uninitialize_rope3d_module();
 
-#endif 
+#endif
