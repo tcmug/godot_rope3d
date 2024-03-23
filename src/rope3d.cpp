@@ -23,6 +23,8 @@ void Rope3D::_bind_methods() {
 Rope3D::Rope3D() {
 	collision_layer = 1;
 	collision_mask = 1;
+	segment_length = 0.2;
+	width = 0.05;
 	is_owner = true;
 }
 
@@ -40,6 +42,7 @@ void Rope3D::_ready() {
 		}
 	}
 
+	create_rope();
 	set_process(is_owner);
 }
 
@@ -103,10 +106,7 @@ int Rope3D::get_collision_layer() const {
 #include <godot_cpp/classes/cylinder_shape3d.hpp>
 #include <godot_cpp/classes/rigid_body3d.hpp>
 
-void Rope3D::create_segment(Vector3 a, Vector3 b) {
-	float segment_length = 10.0;
-	float width = 2.0;
-
+RigidBody3D *Rope3D::create_segment(Vector3 a, Vector3 b) {
 	CylinderShape3D *collider = memnew(CylinderShape3D);
 	collider->set_height(segment_length);
 	collider->set_radius(width);
@@ -119,6 +119,7 @@ void Rope3D::create_segment(Vector3 a, Vector3 b) {
 	segment->set_as_top_level(true);
 	segment->add_child(shape);
 	segment->set_mass(2.0);
+
 	// TODO: Make these tweakable!
 	segment->set_linear_damp(0.0);
 	segment->set_angular_damp(50);
@@ -128,17 +129,115 @@ void Rope3D::create_segment(Vector3 a, Vector3 b) {
 	Vector3 global_direction = Vector3(1, 0, 0);
 
 	this->add_child(segment);
-	segment->look_at_from_position(global_position, global_position + global_direction, up);
+	segment->look_at_from_position(a, a + b, up);
 	segment->set_collision_layer(collision_layer);
 	segment->set_collision_mask(collision_mask);
 
-	// if collision_monitor:
-	// 	segment.contact_monitor = true
-	// 	segment.contacts_reported = 1
-	// 	segment.set_script(segment_script)
-	// 	segment.rope = self
-	// 	segment.connect("body_entered", segment, '_on_body_entered')
-	// 	segment.connect("rope_body_entered", self, '_on_rope_body_entered')
+	/*
+	TODO: Implement collision monitor later
+	  if (collision_monitor) {
+		  segment->contact_monitor = true
+		  segment->contacts_reported = 1
+		  segment->set_script(segment_script)
+		  segment->rope = self
+		  segment->connect("body_entered", segment, '_on_body_entered')
+		  segment->connect("rope_body_entered", self, '_on_rope_body_entered')
+	}*/
 
-	// return segment
+	return segment;
+}
+
+PinJoint3D *Rope3D::create_joint(Vector3 local_position, Vector3 direction, Node3D *a, Node3D *b) {
+	PinJoint3D *joint = memnew(PinJoint3D);
+	joint->set_position(local_position);
+	joint->set_node_a(a->get_path());
+	joint->set_node_b(b->get_path());
+	add_child(joint);
+	// TODO: Add book keeping
+	//joints.push_back(joint)
+	//if (a is Rope3DSegment) {
+	//  a.joint = joint
+	//}
+	return joint;
+}
+
+void Rope3D::create_rope() {
+	Node3D *target = Object::cast_to<Node3D>(get_node_or_null(rope_end));
+
+	if (!target) {
+		return;
+	}
+
+	PhysicsBody3D *physics_object = Object::cast_to<PhysicsBody3D>(get_parent());
+	PhysicsBody3D *target_physics_object = Object::cast_to<PhysicsBody3D>(target->get_parent());
+
+	if (!physics_object || !target_physics_object) {
+		return;
+	}
+
+	Vector3 point_a = get_global_transform().origin;
+	Vector3 point_b = target->get_global_transform().origin;
+
+	int number_of_segments = Math::ceil(point_a.distance_to(point_b) / segment_length);
+	Vector3 dir = point_a.direction_to(point_b);
+	float segment_adjusted_length = point_a.distance_to(point_b) / number_of_segments;
+	Vector3 segment_step = dir * segment_adjusted_length;
+
+	Vector3 segment_pos = point_a - (segment_step * 0.5);
+	Vector3 joint_position = Vector3(0, 0, 0);
+	PhysicsBody3D *previous = physics_object;
+
+	//tracking.push_back(get_parent());
+
+	for (int i = 0; i < number_of_segments; i++) {
+		segment_pos += segment_step;
+		// You need to implement create_segment function
+		PhysicsBody3D *segment = create_segment(segment_pos, dir);
+		PinJoint3D *joint = create_joint(joint_position, dir, previous, segment);
+
+		// TODO: This needs book keeping
+		//if (!joint_a)
+		//		joint_a = joint;
+
+		joint_position += segment_step;
+		previous = segment;
+		//tracking.push_back(segment);
+	}
+
+	//tracking.push_back(target);
+
+	// TODO: This needs book keeping
+	PinJoint3D *joint_b = create_joint(joint_position, dir, previous, target_physics_object);
+
+	/*
+	  // Construct vertices, normals, and UVs
+	  PoolVector3Array vertices;
+	  vertices.resize(tracking.size() * 2);
+
+	  PoolVector3Array normals;
+	  normals.resize(tracking.size() * 2);
+
+	  PoolVector2Array vertex_uvs;
+	  vertex_uvs.resize(tracking.size() * 2);
+
+	  // Set UVs
+	  Array uvs;
+	  uvs.push_back(Vector2(0, 0));
+	  uvs.push_back(Vector2(1, 0));
+	  uvs.push_back(Vector2(0, 1));
+	  uvs.push_back(Vector2(1, 1));
+	  for (int i = 0; i < tracking.size() * 2; i++) {
+		  vertex_uvs.set(i, uvs[i % 4]);
+	  }
+
+	  // Create mesh and mesh instance
+	  Transform transform;
+	  ArrayMesh *mesh = ArrayMesh::_new();
+	  MeshInstance *mesh_instance = MeshInstance::_new();
+	  mesh_instance->set_mesh(mesh);
+	  // FIXME: Translation affects mesh even when it is toplevel
+	  mesh_instance->set_translation(-get_global_transform().get_origin());
+	  mesh_instance->set_as_toplevel(true);
+	  add_child(mesh_instance);
+	*/
 }

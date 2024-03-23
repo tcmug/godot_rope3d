@@ -1,8 +1,11 @@
 #ifndef ROPE3D_H
 #define ROPE3D_H
 
+#include "godot_cpp/core/defs.hpp"
 #include <godot_cpp/classes/node3d.hpp>
 #include <godot_cpp/classes/path3d.hpp>
+#include <godot_cpp/classes/pin_joint3d.hpp>
+#include <godot_cpp/classes/rigid_body3d.hpp>
 
 #include <godot_cpp/variant/packed_color_array.hpp>
 #include <godot_cpp/variant/packed_vector3_array.hpp>
@@ -15,16 +18,19 @@ class Rope3D : public Node3D {
 private:
 	int collision_layer;
 	int collision_mask;
-	bool is_owner; // true when this is the owner of the rope, this is the first
-				   // instance to hit _ready()
+	bool is_owner; // true when this is the owner of the rope, this is the first instance to hit _ready()
 	NodePath rope_end;
+	real_t width;
+	real_t segment_length;
 	// NodePath rope_path;
 
 protected:
 	static void _bind_methods();
 	void initialize_arrays();
 
-	void create_segment(Vector3 a, Vector3 b);
+	RigidBody3D *create_segment(Vector3 a, Vector3 b);
+	PinJoint3D *create_joint(Vector3 local_position, Vector3 direction, Node3D *a, Node3D *b);
+	void create_rope();
 
 public:
 	Rope3D();
