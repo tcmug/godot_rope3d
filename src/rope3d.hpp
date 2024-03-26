@@ -45,6 +45,8 @@ protected:
 	void create_rope();
 	void initialize_geometry();
 
+	Rope3D *get_rope_end_ptr();
+
 public:
 	Rope3D();
 	~Rope3D();

@@ -4,6 +4,7 @@
 #include <godot_cpp/classes/camera3d.hpp>
 #include <godot_cpp/classes/collision_shape3d.hpp>
 #include <godot_cpp/classes/cylinder_shape3d.hpp>
+#include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
 #include <godot_cpp/classes/rigid_body3d.hpp>
 #include <godot_cpp/classes/viewport.hpp>
@@ -53,55 +54,68 @@ Rope3D::Rope3D() {
 	width = 0.05;
 	is_owner = true;
 	is_created = false;
+	mesh_instance = nullptr;
 }
 
 Rope3D::~Rope3D() {
 }
 
 void Rope3D::_ready() {
-	//rope_end = NodePath();
-	//material = Ref<Material>(nullptr);
+	// Uncomment to reset link and materials for debugging and crash avoidance.
+	// rope_end = NodePath();
+	// material = Ref<Material>(nullptr);
 	// Before spawning the mesh, need to figure out which end OWNs the mesh?
-	UtilityFunctions::print("start-init");
-	if (is_owner && !rope_end.is_empty()) {
-		Rope3D *other = dynamic_cast<Rope3D *>(get_node_or_null(rope_end));
-		if (other) {
-			other->is_owner = false;
-			UtilityFunctions::print("owner");
-		} else {
-			UtilityFunctions::print("no-end");
+	if (Engine::get_singleton()->is_editor_hint()) {
+		// Editor specific stuff:
+		set_process(false);
+	} else {
+		// In game:
+		UtilityFunctions::print("start-init");
+		if (is_owner && !rope_end.is_empty()) {
+			Rope3D *other = get_rope_end_ptr();
+			if (other) {
+				other->is_owner = false;
+				UtilityFunctions::print("owner");
+			} else {
+				UtilityFunctions::print("no-end");
+			}
 		}
+		UtilityFunctions::print("end-init");
+
+		// Start _process only when not in editor.
+		set_process(is_owner);
 	}
-	UtilityFunctions::print("end-init");
-	set_process(is_owner);
 }
 
 void Rope3D::set_rope_end(NodePath value) {
-	// Create a bi-directional link between the start and end of the rope.
-	if (value.is_empty()) {
-		// Clear also the other side of the rope.
-		// Also update the other ends rope_end to point to nothing.
-		if (!rope_end.is_empty()) {
-			Rope3D *other = dynamic_cast<Rope3D *>(get_node_or_null(rope_end));
-			if (other) {
-				other->rope_end = NodePath();
-			}
-			rope_end = NodePath();
-		}
-		rope_end = value;
-	} else if (value != rope_end) {
-		// Changing the rope end; must be a Rope3D and other than self.
-		// Also update the other ends rope_end to point to this.
-		Rope3D *other = dynamic_cast<Rope3D *>(get_node_or_null(value));
-		if (other != this) {
-			if (other) {
-				other->rope_end = get_path();
-				other->width = width;
-				other->segment_length = segment_length;
-				other->material = material;
+	if (is_inside_tree()) {
+		// Create a bi-directional link between the start and end of the rope.
+		if (value.is_empty()) {
+			// Clear also the other side of the rope.
+			// Also update the other ends rope_end to point to nothing.
+			if (!rope_end.is_empty()) {
+				Rope3D *other = get_rope_end_ptr();
+				if (other) {
+					other->rope_end = NodePath();
+				}
 			}
 			rope_end = value;
+		} else if (value != rope_end) {
+			// Changing the rope end; must be a Rope3D and other than self.
+			// Also update the other ends rope_end to point to this.
+			Rope3D *other = get_rope_end_ptr();
+			if (other != this) {
+				if (other) {
+					other->rope_end = get_path();
+					other->width = width;
+					other->segment_length = segment_length;
+					other->material = material;
+				}
+				rope_end = value;
+			}
 		}
+	} else {
+		rope_end = value;
 	}
 	UtilityFunctions::print("set rope end");
 }
@@ -110,10 +124,17 @@ NodePath Rope3D::get_rope_end() const {
 	return rope_end;
 }
 
+Rope3D *Rope3D::get_rope_end_ptr() {
+	if (is_inside_tree()) {
+		return dynamic_cast<Rope3D *>(get_node_or_null(rope_end));
+	}
+	return nullptr;
+}
+
 void Rope3D::set_width(real_t value) {
 	width = value;
-	Rope3D *other = dynamic_cast<Rope3D *>(get_node_or_null(rope_end));
-	if (other && other != this) {
+	Rope3D *other = get_rope_end_ptr();
+	if (other) {
 		other->width = width;
 	}
 }
@@ -124,8 +145,8 @@ real_t Rope3D::get_width() const {
 
 void Rope3D::set_segment_length(real_t value) {
 	segment_length = value;
-	Rope3D *other = dynamic_cast<Rope3D *>(get_node_or_null(rope_end));
-	if (other && other != this) {
+	Rope3D *other = get_rope_end_ptr();
+	if (other) {
 		other->segment_length = segment_length;
 	}
 }
@@ -151,7 +172,7 @@ int Rope3D::get_collision_layer() const {
 
 void Rope3D::set_material(Ref<Material> new_material) {
 	material = new_material;
-	Rope3D *other = dynamic_cast<Rope3D *>(get_node_or_null(rope_end));
+	Rope3D *other = get_rope_end_ptr();
 	if (other && other != this) {
 		other->material = material;
 	}
@@ -220,7 +241,7 @@ PinJoint3D *Rope3D::create_joint(Vector3 local_position, Vector3 direction, Node
 }
 
 void Rope3D::create_rope() {
-	Node3D *target = Object::cast_to<Node3D>(get_node_or_null(rope_end));
+	Node3D *target = get_rope_end_ptr();
 
 	if (!target) {
 		return;
@@ -286,53 +307,20 @@ void Rope3D::initialize_geometry() {
 	geometry[ArrayMesh::ARRAY_TEX_UV] = uv_buffer;
 
 	mesh_instance = memnew(MeshInstance3D);
-	/*mesh_instance.material_override = material
-		# FIXME: For some reason the translation affects our
-		# mesh even when it is toplevel, so shift it to world origin.
-	*/
+
+	// FIXME: For some reason the translation affects our
+	// mesh even when it is toplevel, so shift it to world origin.
 	mesh_instance->set_position(-get_global_transform().origin);
 	mesh_instance->set_as_top_level(true);
 	mesh_instance->set_material_override(material);
 	ArrayMesh *mesh = memnew(ArrayMesh);
 	mesh_instance->set_mesh(Ref(mesh));
 	add_child(mesh_instance);
-
-	/*
-	  // Construct vertices, normals, and UVs
-		  PoolVector3Array vertices;
-		  vertices.resize(tracking.size() * 2);
-
-		  PoolVector3Array normals;
-		  normals.resize(tracking.size() * 2);
-
-		  PoolVector2Array vertex_uvs;
-		  vertex_uvs.resize(tracking.size() * 2);
-
-		  // Set UVs
-		  Array uvs;
-		  uvs.push_back(Vector2(0, 0));
-		  uvs.push_back(Vector2(1, 0));
-		  uvs.push_back(Vector2(0, 1));
-		  uvs.push_back(Vector2(1, 1));
-		  for (int i = 0; i < tracking.size() * 2; i++) {
-			  vertex_uvs.set(i, uvs[i % 4]);
-		  }
-
-		  // Create mesh and mesh instance
-		  Transform transform;
-		  ArrayMesh *mesh = ArrayMesh::_new();
-		  MeshInstance *mesh_instance = MeshInstance::_new();
-		  mesh_instance->set_mesh(mesh);
-		  // FIXME: Translation affects mesh even when it is toplevel
-		  mesh_instance->set_translation(-get_global_transform().get_origin());
-		  mesh_instance->set_as_toplevel(true);
-		  add_child(mesh_instance);
-		*/
 }
 
 void Rope3D::_process(double delta) {
 	if (!is_created) {
-		UtilityFunctions::print("process");
+		UtilityFunctions::print("Rope created");
 		create_rope();
 		is_created = true;
 	}
@@ -395,6 +383,12 @@ void Rope3D::_process(double delta) {
 			uv_buffer[uvi++] = Vector2(x, 1);
 		}
 
+		// Set mesh aabb for visibility;
+		Vector3 aabb_center = (min_pos + max_pos) * 0.5;
+		Vector3 aabb_size = (max_pos - aabb_center);
+		AABB aabb(aabb_center, aabb_size);
+		mesh_instance->set_custom_aabb(aabb);
+
 		Ref<ArrayMesh> mesh = mesh_instance->get_mesh();
 		if (mesh.is_valid()) {
 			ArrayMesh *array_mesh = mesh.ptr();
@@ -416,8 +410,5 @@ void Rope3D::_process(double delta) {
 					material->set_shader_parameter("SPAWN_INTERVAL_SECONDS", float(update_interval));
 				}
 			}*/
-	} else {
-		//	set_process(false);
-		//UtilityFunctions::print("No camera, no mesh_instance");
 	}
 }
