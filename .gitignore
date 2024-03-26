@@ -1,6 +1,7 @@
 .scons-cache/
 *.os
 *.import
+*.so
 .sconf_temp
 .sconsign.dblite
 *.pyc
