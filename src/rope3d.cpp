@@ -39,7 +39,7 @@ void Rope3D::_bind_methods() {
 
 	ADD_GROUP("Rope", "rope_");
 	ClassDB::add_property("Rope3D", PropertyInfo(Variant::NODE_PATH, "rope_end", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "PhysicsBody3D"), "set_rope_end", "get_rope_end");
-	ClassDB::add_property("Rope3D", PropertyInfo(Variant::FLOAT, "rope_width"), "set_width", "get_width");
+	ClassDB::add_property("Rope3D", PropertyInfo(Variant::FLOAT, "rope_width"), "set_rope_width", "get_rope_width");
 
 	ADD_GROUP("Geometry", "geometry_");
 	ClassDB::add_property("Rope3D", PropertyInfo(Variant::OBJECT, "geometry_material", PROPERTY_HINT_RESOURCE_TYPE, "Material"), "set_material", "get_material");
@@ -190,6 +190,9 @@ void Rope3D::create_rope() {
 			tracked_nodes.push_back(segment);
 		} else {
 			segment = target;
+			if (!target) {
+				previous = nullptr;
+			}
 		}
 
 		if (previous) {
