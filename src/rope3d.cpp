@@ -1,8 +1,10 @@
 #include "rope3d.hpp"
+#include "godot_cpp/variant/packed_vector3_array.hpp"
 
 #include <godot_cpp/classes/array_mesh.hpp>
 #include <godot_cpp/classes/camera3d.hpp>
 #include <godot_cpp/classes/collision_shape3d.hpp>
+#include <godot_cpp/classes/curve3d.hpp>
 #include <godot_cpp/classes/cylinder_shape3d.hpp>
 #include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
@@ -25,11 +27,8 @@ void Rope3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_rope_end", "value"), &Rope3D::set_rope_end);
 	ClassDB::bind_method(D_METHOD("get_rope_end"), &Rope3D::get_rope_end);
 
-	ClassDB::bind_method(D_METHOD("set_width", "value"), &Rope3D::set_width);
-	ClassDB::bind_method(D_METHOD("get_width"), &Rope3D::get_width);
-
-	ClassDB::bind_method(D_METHOD("set_segment_length", "value"), &Rope3D::set_segment_length);
-	ClassDB::bind_method(D_METHOD("get_segment_length"), &Rope3D::get_segment_length);
+	ClassDB::bind_method(D_METHOD("set_rope_width", "value"), &Rope3D::set_rope_width);
+	ClassDB::bind_method(D_METHOD("get_rope_width"), &Rope3D::get_rope_width);
 
 	ClassDB::bind_method(D_METHOD("set_material", "new_material"), &Rope3D::set_material);
 	ClassDB::bind_method(D_METHOD("get_material"), &Rope3D::get_material);
@@ -39,9 +38,8 @@ void Rope3D::_bind_methods() {
 	ClassDB::add_property("Rope3D", PropertyInfo(Variant::INT, "collision_mask", PROPERTY_HINT_LAYERS_3D_PHYSICS), "set_collision_mask", "get_collision_mask");
 
 	ADD_GROUP("Rope", "rope_");
-	ClassDB::add_property("Rope3D", PropertyInfo(Variant::NODE_PATH, "rope_end", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Rope3D"), "set_rope_end", "get_rope_end");
+	ClassDB::add_property("Rope3D", PropertyInfo(Variant::NODE_PATH, "rope_end", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "PhysicsBody3D"), "set_rope_end", "get_rope_end");
 	ClassDB::add_property("Rope3D", PropertyInfo(Variant::FLOAT, "rope_width"), "set_width", "get_width");
-	ClassDB::add_property("Rope3D", PropertyInfo(Variant::FLOAT, "rope_segment_length"), "set_segment_length", "get_segment_length");
 
 	ADD_GROUP("Geometry", "geometry_");
 	ClassDB::add_property("Rope3D", PropertyInfo(Variant::OBJECT, "geometry_material", PROPERTY_HINT_RESOURCE_TYPE, "Material"), "set_material", "get_material");
@@ -50,9 +48,7 @@ void Rope3D::_bind_methods() {
 Rope3D::Rope3D() {
 	collision_layer = 1;
 	collision_mask = 1;
-	segment_length = 0.25;
-	width = 0.05;
-	is_owner = true;
+	rope_width = 0.05;
 	is_created = false;
 	mesh_instance = nullptr;
 }
@@ -66,57 +62,12 @@ void Rope3D::_ready() {
 	// material = Ref<Material>(nullptr);
 	// Before spawning the mesh, need to figure out which end OWNs the mesh?
 	if (Engine::get_singleton()->is_editor_hint()) {
-		// Editor specific stuff:
 		set_process(false);
-	} else {
-		// In game:
-		UtilityFunctions::print("start-init");
-		if (is_owner && !rope_end.is_empty()) {
-			Rope3D *other = get_rope_end_ptr();
-			if (other) {
-				other->is_owner = false;
-				UtilityFunctions::print("owner");
-			} else {
-				UtilityFunctions::print("no-end");
-			}
-		}
-		UtilityFunctions::print("end-init");
-
-		// Start _process only when not in editor.
-		set_process(is_owner);
 	}
 }
 
 void Rope3D::set_rope_end(NodePath value) {
-	if (is_inside_tree()) {
-		// Create a bi-directional link between the start and end of the rope.
-		if (value.is_empty()) {
-			// Clear also the other side of the rope.
-			// Also update the other ends rope_end to point to nothing.
-			if (!rope_end.is_empty()) {
-				Rope3D *other = get_rope_end_ptr();
-				if (other) {
-					other->rope_end = NodePath();
-				}
-			}
-			rope_end = value;
-		} else if (value != rope_end) {
-			// Changing the rope end; must be a Rope3D and other than self.
-			// Also update the other ends rope_end to point to this.
-			Rope3D *other = get_rope_end_ptr();
-			if (other != this) {
-				if (other) {
-					other->rope_end = get_path();
-					other->width = width;
-					other->segment_length = segment_length;
-					other->material = material;
-				}
-				rope_end = value;
-			}
-		}
-	} else {
-		rope_end = value;
-	}
+	rope_end = value;
 	UtilityFunctions::print("set rope end");
 }
 
@@ -124,36 +75,21 @@ NodePath Rope3D::get_rope_end() const {
 	return rope_end;
 }
 
-Rope3D *Rope3D::get_rope_end_ptr() {
+PhysicsBody3D *Rope3D::get_rope_end_ptr() {
 	if (is_inside_tree()) {
-		return dynamic_cast<Rope3D *>(get_node_or_null(rope_end));
+		return Object::cast_to<PhysicsBody3D>(get_node_or_null(rope_end));
 	}
 	return nullptr;
 }
 
-void Rope3D::set_width(real_t value) {
-	width = value;
-	Rope3D *other = get_rope_end_ptr();
-	if (other) {
-		other->width = width;
-	}
+void Rope3D::set_rope_width(real_t value) {
+	rope_width = value;
 }
 
-real_t Rope3D::get_width() const {
-	return width;
+real_t Rope3D::get_rope_width() const {
+	return rope_width;
 }
 
-void Rope3D::set_segment_length(real_t value) {
-	segment_length = value;
-	Rope3D *other = get_rope_end_ptr();
-	if (other) {
-		other->segment_length = segment_length;
-	}
-}
-
-real_t Rope3D::get_segment_length() const {
-	return segment_length;
-}
 void Rope3D::set_collision_mask(int value) {
 	collision_mask = value;
 }
@@ -172,21 +108,18 @@ int Rope3D::get_collision_layer() const {
 
 void Rope3D::set_material(Ref<Material> new_material) {
 	material = new_material;
-	Rope3D *other = get_rope_end_ptr();
-	if (other && other != this) {
-		other->material = material;
-	}
 }
 
 Ref<Material> Rope3D::get_material() const {
 	return material;
 }
 
-RigidBody3D *Rope3D::create_segment(Vector3 origin, Vector3 direction) {
+RigidBody3D *Rope3D::create_segment() {
 	// Prepare shape.
 	CylinderShape3D *collider = memnew(CylinderShape3D);
-	collider->set_height(segment_length);
-	collider->set_radius(width);
+	real_t bake_interval = get_curve().ptr()->get_bake_interval();
+	collider->set_height(bake_interval);
+	collider->set_radius(rope_width);
 
 	// Prepare collider.
 	CollisionShape3D *shape = memnew(CollisionShape3D);
@@ -195,7 +128,7 @@ RigidBody3D *Rope3D::create_segment(Vector3 origin, Vector3 direction) {
 
 	// Prepare sphysics body.
 	RigidBody3D *segment = memnew(RigidBody3D);
-	segment->set_as_top_level(true);
+	segment->set_as_top_level(false);
 	segment->add_child(shape);
 	segment->set_mass(2.0);
 
@@ -207,10 +140,10 @@ RigidBody3D *Rope3D::create_segment(Vector3 origin, Vector3 direction) {
 	segment->set_collision_mask(collision_mask);
 
 	// Add under self, as top level object.
-	add_child(segment);
+	//add_child(segment);
 
 	// Align and orient segment.
-	segment->look_at_from_position(origin, origin + direction, Vector3(0, 1, 0));
+	//segment->look_at_from_position(origin, origin + direction, Vector3(0, 1, 0));
 
 	/*
 	TODO: Implement collision monitor later
@@ -226,67 +159,53 @@ RigidBody3D *Rope3D::create_segment(Vector3 origin, Vector3 direction) {
 	return segment;
 }
 
-PinJoint3D *Rope3D::create_joint(Vector3 local_position, Vector3 direction, Node3D *a, Node3D *b) {
-	PinJoint3D *joint = memnew(PinJoint3D);
-	joint->set_position(local_position);
-	joint->set_node_a(a->get_path());
-	joint->set_node_b(b->get_path());
-	add_child(joint);
-	// TODO: Add book keeping
-	//joints.push_back(joint)
-	//if (a is Rope3DSegment) {
-	//  a.joint = joint
-	//}
-	return joint;
-}
-
 void Rope3D::create_rope() {
-	Node3D *target = get_rope_end_ptr();
+	PhysicsBody3D *source = Object::cast_to<PhysicsBody3D>(get_parent());
 
-	if (!target) {
-		return;
-	}
+	//Vector3 point_a = get_global_transform().origin;
+	//Vector3 point_b = target->get_global_transform().origin;
 
-	PhysicsBody3D *physics_object = Object::cast_to<PhysicsBody3D>(get_parent());
-	PhysicsBody3D *target_physics_object = Object::cast_to<PhysicsBody3D>(target->get_parent());
+	// Create points that make up the rope.
+	Curve3D *curve = get_curve().ptr();
+	PackedVector3Array pivot_points = curve->get_baked_points();
 
-	if (!physics_object || !target_physics_object) {
-		return;
-	}
+	PhysicsBody3D *previous = source;
+	PhysicsBody3D *target = get_rope_end_ptr();
 
-	Vector3 point_a = get_global_transform().origin;
-	Vector3 point_b = target->get_global_transform().origin;
+	Vector3 direction;
+	real_t half_bake_interval = curve->get_bake_interval() * 0.5;
+	Vector3 global_pos = get_global_position();
+	PinJoint3D *pivot;
+	PhysicsBody3D *segment;
+	for (int i = 0; i < pivot_points.size(); i++) {
+		Vector3 origin = to_global(pivot_points[i]);
+		if (i < pivot_points.size() - 1) {
+			direction = origin.direction_to(to_global(pivot_points[i + 1]));
+		}
 
-	int number_of_segments = Math::ceil(point_a.distance_to(point_b) / segment_length);
-	Vector3 dir = point_a.direction_to(point_b);
-	float segment_adjusted_length = point_a.distance_to(point_b) / number_of_segments;
-	Vector3 segment_step = dir * segment_adjusted_length;
+		if (i < pivot_points.size() - 1) {
+			segment = create_segment();
+			add_child(segment);
+			segment->look_at_from_position(origin + (direction * half_bake_interval), origin + direction, Vector3(0, 1, 0));
+			tracked_nodes.push_back(segment);
+		} else {
+			segment = target;
+		}
 
-	Vector3 segment_pos = point_a - (segment_step * 0.5);
-	Vector3 joint_position = Vector3(0, 0, 0);
-	PhysicsBody3D *previous = physics_object;
+		if (previous) {
+			pivot = memnew(PinJoint3D);
+			add_child(pivot);
+			pivot->set_global_position(origin);
+			pivot->set_node_a(previous->get_path());
+			pivot->set_node_b(segment->get_path());
+		}
 
-	tracked_nodes.push_back(this);
-
-	for (int i = 0; i < number_of_segments; i++) {
-		segment_pos += segment_step;
-		// You need to implement create_segment function
-		PhysicsBody3D *segment = create_segment(segment_pos, dir);
-		PinJoint3D *joint = create_joint(joint_position, dir, previous, segment);
-
-		// TODO: This needs book keeping
-		//if (!joint_a)
-		//		joint_a = joint;
-
-		joint_position += segment_step;
 		previous = segment;
-		tracked_nodes.push_back(segment);
 	}
 
-	tracked_nodes.push_back(target);
-
-	// TODO: This needs book keeping
-	PinJoint3D *joint_b = create_joint(joint_position, dir, previous, target_physics_object);
+	// When cutting a rope, we know the segment, from the segment
+	// we can fetch the rope owner and pinjoints that make up the point.
+	// copy material and other properties & construct a new rope simply from the points.
 
 	initialize_geometry();
 	UtilityFunctions::print("Rope created.");
@@ -307,11 +226,6 @@ void Rope3D::initialize_geometry() {
 	geometry[ArrayMesh::ARRAY_TEX_UV] = uv_buffer;
 
 	mesh_instance = memnew(MeshInstance3D);
-
-	// FIXME: For some reason the translation affects our
-	// mesh even when it is toplevel, so shift it to world origin.
-	mesh_instance->set_position(-get_global_transform().origin);
-	mesh_instance->set_as_top_level(true);
 	mesh_instance->set_material_override(material);
 	ArrayMesh *mesh = memnew(ArrayMesh);
 	mesh_instance->set_mesh(Ref(mesh));
@@ -342,15 +256,15 @@ void Rope3D::_process(double delta) {
 		Vector3 direction_vector;
 
 		for (int i = 0; i < num_points; i++) {
-			Vector3 position = tracked_nodes[i]->get_global_position();
+			Vector3 position = to_local(tracked_nodes[i]->get_global_position());
 			Vector3 normal = position.direction_to(camera_position);
 			if (i < num_points - 1) {
 				direction_vector = position.direction_to(
-						tracked_nodes[i + 1]->get_global_position());
+						to_local(tracked_nodes[i + 1]->get_global_position()));
 			}
 			Vector3 orientation = direction_vector.cross(normal);
 			Vector3 tangent = direction_vector;
-			double sz = width;
+			double sz = rope_width;
 
 			Vector3 edge_vector = orientation * sz;
 

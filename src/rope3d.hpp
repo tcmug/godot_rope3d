@@ -13,17 +13,14 @@
 
 namespace godot {
 
-class Rope3D : public Node3D {
-	GDCLASS(Rope3D, Node3D)
+class Rope3D : public Path3D {
+	GDCLASS(Rope3D, Path3D)
 
 private:
 	int collision_layer;
 	int collision_mask;
-	bool is_owner; // true when this is the owner of the rope, this is the first instance to hit _ready()
 	NodePath rope_end;
-	real_t width;
-	real_t segment_length;
-	// NodePath rope_path;
+	real_t rope_width;
 
 	// Mesh:
 	Ref<Material> material;
@@ -40,12 +37,10 @@ protected:
 	void initialize_arrays();
 
 	Vector<Node3D *> tracked_nodes;
-	RigidBody3D *create_segment(Vector3 a, Vector3 b);
-	PinJoint3D *create_joint(Vector3 local_position, Vector3 direction, Node3D *a, Node3D *b);
+	RigidBody3D *create_segment();
 	void create_rope();
 	void initialize_geometry();
-
-	Rope3D *get_rope_end_ptr();
+	PhysicsBody3D *get_rope_end_ptr();
 
 public:
 	Rope3D();
@@ -60,11 +55,8 @@ public:
 	void set_rope_end(NodePath value);
 	NodePath get_rope_end() const;
 
-	void set_width(real_t value);
-	real_t get_width() const;
-
-	void set_segment_length(real_t value);
-	real_t get_segment_length() const;
+	void set_rope_width(real_t value);
+	real_t get_rope_width() const;
 
 	Ref<Material> get_material() const;
 	void set_material(const Ref<Material> material);
