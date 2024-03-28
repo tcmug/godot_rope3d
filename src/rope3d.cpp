@@ -4,9 +4,11 @@
 #include <godot_cpp/classes/array_mesh.hpp>
 #include <godot_cpp/classes/camera3d.hpp>
 #include <godot_cpp/classes/collision_shape3d.hpp>
+#include <godot_cpp/classes/cone_twist_joint3d.hpp>
 #include <godot_cpp/classes/curve3d.hpp>
 #include <godot_cpp/classes/cylinder_shape3d.hpp>
 #include <godot_cpp/classes/engine.hpp>
+#include <godot_cpp/classes/generic6_dof_joint3d.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
 #include <godot_cpp/classes/rigid_body3d.hpp>
 #include <godot_cpp/classes/viewport.hpp>
@@ -155,12 +157,12 @@ Ref<Material> Rope3D::get_material() const {
 	return material;
 }
 
-RigidBody3D *Rope3D::create_segment() {
+RigidBody3D *Rope3D::create_segment(real_t segment_length) {
 	// Prepare shape.
 	CylinderShape3D *collider = memnew(CylinderShape3D);
 	real_t bake_interval = get_curve().ptr()->get_bake_interval();
-	collider->set_height(bake_interval);
-	collider->set_radius(rope_width);
+	collider->set_height(segment_length);
+	collider->set_radius(rope_width * 3.0);
 
 	// Prepare collider.
 	CollisionShape3D *shape = memnew(CollisionShape3D);
@@ -176,7 +178,7 @@ RigidBody3D *Rope3D::create_segment() {
 	// Set properties.
 	// TODO: Make these tweakable!
 	//segment->set_linear_damp(0.0);
-	segment->set_angular_damp(100.0);
+	segment->set_angular_damp(50.0);
 	segment->set_collision_layer(collision_layer);
 	segment->set_collision_mask(collision_mask);
 
@@ -205,27 +207,31 @@ void Rope3D::create_rope() {
 	//Vector3 point_b = target->get_global_transform().origin;
 	// Create points that make up the rope.
 	Curve3D *curve = get_curve().ptr();
-	PackedVector3Array pivot_points = curve->get_baked_points();
-
 	PhysicsBody3D *node_a = Object::cast_to<PhysicsBody3D>(get_node_or_null(rope_node_a));
 	PhysicsBody3D *node_b = Object::cast_to<PhysicsBody3D>(get_node_or_null(rope_node_b));
 	PhysicsBody3D *previous = node_a;
 
 	Vector3 direction;
-	real_t half_bake_interval = curve->get_bake_interval() * 0.5;
+	real_t segment_length = 1.0;
+	real_t half_bake_interval = segment_length * 0.5;
 	Vector3 global_pos = get_global_position();
-	PinJoint3D *pivot;
+	Generic6DOFJoint3D *pivot;
 	PhysicsBody3D *segment;
-	for (int i = 0; i < pivot_points.size(); i++) {
-		Vector3 origin = to_global(pivot_points[i]);
-		if (i < pivot_points.size() - 1) {
-			direction = origin.direction_to(to_global(pivot_points[i + 1]));
-		}
+	Vector3 next_origin;
+	for (real_t len = 0; len < curve->get_baked_length(); len += segment_length) {
+		Vector3 origin = to_global(curve->sample_baked(len));
+		bool last = len >= curve->get_baked_length() - segment_length;
 
-		if (i < pivot_points.size() - 1) {
-			segment = create_segment();
+		if (!last) {
+			next_origin = to_global(curve->sample_baked(len + segment_length));
+			direction = origin.direction_to(next_origin);
+			UtilityFunctions::print("dist: ", next_origin.distance_to(origin));
+		}
+		if (!last) {
+			segment = create_segment(segment_length);
 			add_child(segment);
-			segment->look_at_from_position(origin + (direction * half_bake_interval), origin + direction, Vector3(0, 1, 0));
+			Vector3 segment_origin = origin + (direction * half_bake_interval);
+			segment->look_at_from_position(segment_origin, segment_origin + direction, Vector3(0, 1, 0));
 			tracked_nodes.push_back(segment);
 		} else {
 			segment = node_b;
@@ -235,14 +241,31 @@ void Rope3D::create_rope() {
 		}
 
 		if (previous) {
-			pivot = memnew(PinJoint3D);
+			pivot = memnew(Generic6DOFJoint3D);
 			add_child(pivot);
-			pivot->set_param(PinJoint3D::PARAM_BIAS, rope_joint_bias);
-			pivot->set_param(PinJoint3D::PARAM_DAMPING, rope_joint_damping);
-			pivot->set_param(PinJoint3D::PARAM_IMPULSE_CLAMP, rope_joint_impulse_clamp);
+			/*
+				  pivot->set_param(ConeTwistJoint3D::PARAM_TWIST_SPAN, 180);
+				  pivot->set_param(ConeTwistJoint3D::PARAM_BIAS, 0.3);
+				  pivot->set_param(ConeTwistJoint3D::PARAM_SOFTNESS, 0.8);
+				  pivot->set_param(ConeTwistJoint3D::PARAM_RELAXATION, 1.0);*/
+			//pivot->set_param(PinJoint3D::PARAM_BIAS, rope_joint_bias);
+			//pivot->set_param(PinJoint3D::PARAM_DAMPING, rope_joint_damping);
+			//pivot->set_param(PinJoint3D::PARAM_IMPULSE_CLAMP, rope_joint_impulse_clamp);
 			pivot->set_global_position(origin);
 			pivot->set_node_a(previous->get_path());
 			pivot->set_node_b(segment->get_path());
+			pivot->set_flag_x(Generic6DOFJoint3D::FLAG_ENABLE_ANGULAR_LIMIT, false);
+			pivot->set_flag_y(Generic6DOFJoint3D::FLAG_ENABLE_ANGULAR_LIMIT, false);
+			pivot->set_flag_z(Generic6DOFJoint3D::FLAG_ENABLE_ANGULAR_LIMIT, false);
+			pivot->set_flag_x(Generic6DOFJoint3D::FLAG_ENABLE_LINEAR_SPRING, true);
+			pivot->set_flag_y(Generic6DOFJoint3D::FLAG_ENABLE_LINEAR_SPRING, true);
+			pivot->set_flag_z(Generic6DOFJoint3D::FLAG_ENABLE_LINEAR_SPRING, true);
+			pivot->set_param_z(Generic6DOFJoint3D::PARAM_LINEAR_SPRING_DAMPING, rope_joint_damping);
+			pivot->set_param_y(Generic6DOFJoint3D::PARAM_LINEAR_SPRING_DAMPING, rope_joint_damping);
+			pivot->set_param_z(Generic6DOFJoint3D::PARAM_LINEAR_SPRING_DAMPING, rope_joint_damping);
+			pivot->set_param_z(Generic6DOFJoint3D::PARAM_LINEAR_SPRING_STIFFNESS, rope_joint_bias);
+			pivot->set_param_y(Generic6DOFJoint3D::PARAM_LINEAR_SPRING_STIFFNESS, rope_joint_bias);
+			pivot->set_param_z(Generic6DOFJoint3D::PARAM_LINEAR_SPRING_STIFFNESS, rope_joint_bias);
 		}
 
 		previous = segment;

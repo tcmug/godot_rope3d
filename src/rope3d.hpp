@@ -42,7 +42,7 @@ protected:
 	void initialize_arrays();
 
 	Vector<Node3D *> tracked_nodes;
-	RigidBody3D *create_segment();
+	RigidBody3D *create_segment(real_t segment_length);
 	void create_rope();
 	void initialize_geometry();
 
