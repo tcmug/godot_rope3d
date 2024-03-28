@@ -19,9 +19,14 @@ class Rope3D : public Path3D {
 private:
 	int collision_layer;
 	int collision_mask;
-	NodePath rope_end;
-	real_t rope_width;
 
+	NodePath rope_node_a;
+	NodePath rope_node_b;
+	real_t rope_width;
+	real_t rope_joint_bias;
+	real_t rope_joint_damping;
+	real_t rope_joint_impulse_clamp;
+	real_t rope_segment_mass;
 	// Mesh:
 	Ref<Material> material;
 	MeshInstance3D *mesh_instance;
@@ -40,7 +45,6 @@ protected:
 	RigidBody3D *create_segment();
 	void create_rope();
 	void initialize_geometry();
-	PhysicsBody3D *get_rope_end_ptr();
 
 public:
 	Rope3D();
@@ -52,16 +56,24 @@ public:
 	void set_collision_layer(int value);
 	int get_collision_layer() const;
 
-	void set_rope_end(NodePath value);
-	NodePath get_rope_end() const;
+	void set_rope_node_a(NodePath value);
+	void set_rope_node_b(NodePath value);
+
+	NodePath get_rope_node_a() const;
+	NodePath get_rope_node_b() const;
 
 	void set_rope_width(real_t value);
+	void set_rope_joint_bias(real_t value);
+	void set_rope_joint_damping(real_t value);
+	void set_rope_joint_impulse_clamp(real_t value);
+
 	real_t get_rope_width() const;
+	real_t get_rope_joint_bias() const;
+	real_t get_rope_joint_damping() const;
+	real_t get_rope_joint_impulse_clamp() const;
 
 	Ref<Material> get_material() const;
 	void set_material(const Ref<Material> material);
-	// void set_rope_path(NodePath value);
-	// NodePath get_rope_path() const;
 
 	void _ready() override;
 	void _process(double delta) override;
