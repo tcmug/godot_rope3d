@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://duuj8y4ltnxx4"]
+[gd_scene load_steps=9 format=3 uid="uid://duuj8y4ltnxx4"]
 
 [ext_resource type="Texture2D" uid="uid://bh8grb2y3opv7" path="res://addons/rope3d/example/albedo.png" id="1_5umgk"]
 [ext_resource type="Texture2D" uid="uid://dvki65wgcyapd" path="res://addons/rope3d/example/normal.png" id="2_m823o"]
@@ -27,12 +27,20 @@ size = Vector3(50, 1, 50)
 [sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_yfs2j"]
 data = PackedVector3Array(-25, 0.5, 25, 25, 0.5, 25, -25, -0.5, 25, 25, 0.5, 25, 25, -0.5, 25, -25, -0.5, 25, 25, 0.5, -25, -25, 0.5, -25, 25, -0.5, -25, -25, 0.5, -25, -25, -0.5, -25, 25, -0.5, -25, 25, 0.5, 25, 25, 0.5, -25, 25, -0.5, 25, 25, 0.5, -25, 25, -0.5, -25, 25, -0.5, 25, -25, 0.5, -25, -25, 0.5, 25, -25, -0.5, -25, -25, 0.5, 25, -25, -0.5, 25, -25, -0.5, -25, 25, 0.5, 25, -25, 0.5, 25, 25, 0.5, -25, -25, 0.5, 25, -25, 0.5, -25, 25, 0.5, -25, -25, -0.5, 25, 25, -0.5, 25, -25, -0.5, -25, 25, -0.5, 25, 25, -0.5, -25, -25, -0.5, -25)
 
+[sub_resource type="Curve3D" id="Curve3D_wmxad"]
+_data = {
+"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 0.301943, 0.00188065, -0.105051, 0, 0, 0, 0, 0, 0, 7.67316, -2.46539, -1.75172),
+"tilts": PackedFloat32Array(0, 0)
+}
+point_count = 2
+
 [node name="Node3D" type="Node3D"]
 
 [node name="StaticBody3D" type="StaticBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.938075, -0.642521, 0.163372)
 
 [node name="Rope3D" type="Rope3D" parent="."]
+rope_num_segments = 20
 rope_node_a = NodePath("../StaticBody3D")
 rope_joint_bias = 0.0
 geometry_material = SubResource("StandardMaterial3D_ahwsh")
@@ -58,3 +66,8 @@ mesh = SubResource("BoxMesh_vmflo")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D2"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -8.87429, 0)
 shape = SubResource("ConcavePolygonShape3D_yfs2j")
+
+[node name="Rope3D2" type="Rope3D" parent="."]
+rope_node_a = NodePath("../StaticBody3D")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.54762, 4.04986, 0.424549)
+curve = SubResource("Curve3D_wmxad")

@@ -2,11 +2,11 @@
 #define ROPE3D_H
 
 #include "godot_cpp/core/defs.hpp"
+#include <godot_cpp/classes/joint3d.hpp>
 #include <godot_cpp/classes/material.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
 #include <godot_cpp/classes/node3d.hpp>
 #include <godot_cpp/classes/path3d.hpp>
-#include <godot_cpp/classes/pin_joint3d.hpp>
 #include <godot_cpp/classes/rigid_body3d.hpp>
 #include <godot_cpp/templates/vector.hpp>
 #include <godot_cpp/variant/packed_vector3_array.hpp>
@@ -22,6 +22,9 @@ private:
 
 	NodePath rope_node_a;
 	NodePath rope_node_b;
+
+	int rope_num_segments;
+
 	real_t rope_width;
 	real_t rope_joint_bias;
 	real_t rope_joint_damping;
@@ -42,7 +45,10 @@ protected:
 	void initialize_arrays();
 
 	Vector<Node3D *> tracked_nodes;
-	RigidBody3D *create_segment(real_t segment_length);
+
+	RigidBody3D *create_segment(const Vector3 &origin, const Vector3 &next, real_t segment_length);
+	Joint3D *create_pivot(const Vector3 &origin, const NodePath &a, const NodePath &b);
+
 	void create_rope();
 	void initialize_geometry();
 
@@ -62,11 +68,13 @@ public:
 	NodePath get_rope_node_a() const;
 	NodePath get_rope_node_b() const;
 
+	void set_rope_num_segments(int value);
 	void set_rope_width(real_t value);
 	void set_rope_joint_bias(real_t value);
 	void set_rope_joint_damping(real_t value);
 	void set_rope_joint_impulse_clamp(real_t value);
 
+	int get_rope_num_segments() const;
 	real_t get_rope_width() const;
 	real_t get_rope_joint_bias() const;
 	real_t get_rope_joint_damping() const;
