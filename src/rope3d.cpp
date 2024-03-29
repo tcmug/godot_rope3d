@@ -5,6 +5,7 @@
 
 #include <godot_cpp/classes/array_mesh.hpp>
 #include <godot_cpp/classes/camera3d.hpp>
+#include <godot_cpp/classes/capsule_shape3d.hpp>
 #include <godot_cpp/classes/collision_shape3d.hpp>
 #include <godot_cpp/classes/cone_twist_joint3d.hpp>
 #include <godot_cpp/classes/curve3d.hpp>
@@ -177,11 +178,12 @@ Ref<Material> Rope3D::get_material() const {
 
 RigidBody3D *Rope3D::create_segment(const Vector3 &origin, const Vector3 &next, real_t segment_length) {
 	// Prepare shape.
-	CylinderShape3D *collider = memnew(CylinderShape3D);
+	//CylinderShape3D *collider = memnew(CylinderShape3D);
+	CapsuleShape3D *collider = memnew(CapsuleShape3D);
 
 	real_t bake_interval = get_curve().ptr()->get_bake_interval();
-	collider->set_height(segment_length * 0.98);
-	collider->set_radius(rope_width * 3.0);
+	collider->set_height(segment_length * 0.95);
+	collider->set_radius(rope_width);
 
 	// Prepare collider.
 	CollisionShape3D *shape = memnew(CollisionShape3D);
@@ -191,14 +193,23 @@ RigidBody3D *Rope3D::create_segment(const Vector3 &origin, const Vector3 &next, 
 	// Prepare sphysics body.
 	RigidBody3D *segment = memnew(RigidBody3D);
 	add_child(segment);
+	segment->set_use_continuous_collision_detection(true);
+
+	Node3D *tracker = memnew(Node3D);
+	tracker->set_position(Vector3(0, 0, segment_length * 0.5));
+	segment->add_child(tracker);
+
+	tracker = memnew(Node3D);
+	tracker->set_position(Vector3(0, 0, segment_length * -0.5));
+	segment->add_child(tracker);
 
 	segment->add_child(shape);
 	segment->set_mass(rope_segment_mass);
 
 	// Set properties.
 	// TODO: Make these tweakable!
-	segment->set_linear_damp(0.0);
-	segment->set_angular_damp(50.0);
+	//segment->set_linear_damp(0.0);
+	//segment->set_angular_damp(20.0);
 	segment->set_collision_layer(collision_layer);
 	segment->set_collision_mask(collision_mask);
 
@@ -218,7 +229,6 @@ RigidBody3D *Rope3D::create_segment(const Vector3 &origin, const Vector3 &next, 
 		  segment->connect("body_entered", segment, '_on_body_entered')
 		  segment->connect("rope_body_entered", self, '_on_rope_body_entered')
 	}*/
-
 	Vector3 physics_origin = (origin + next) * 0.5;
 	segment->look_at_from_position(physics_origin, next, Vector3(0, 1, 0));
 	return segment;
@@ -278,8 +288,9 @@ void Rope3D::create_rope() {
 
 		if (!last) {
 			segment = create_segment(origin, next, segment_length);
-			tracked_nodes.push_back(segment);
+			tracked_nodes.push_back(Object::cast_to<Node3D>(segment->get_child(0)));
 		} else {
+			tracked_nodes.push_back(Object::cast_to<Node3D>(previous->get_child(1)));
 			segment = node_b;
 			if (!node_b) {
 				previous = nullptr;
@@ -288,6 +299,7 @@ void Rope3D::create_rope() {
 
 		if (previous) {
 			Joint3D *pivot = create_pivot(origin, previous->get_path(), segment->get_path());
+			//tracked_nodes.push_back(pivot);
 		}
 
 		previous = segment;

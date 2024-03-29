@@ -1,25 +1,10 @@
-[gd_scene load_steps=9 format=3 uid="uid://duuj8y4ltnxx4"]
-
-[ext_resource type="Texture2D" uid="uid://bh8grb2y3opv7" path="res://addons/rope3d/example/albedo.png" id="1_5umgk"]
-[ext_resource type="Texture2D" uid="uid://dvki65wgcyapd" path="res://addons/rope3d/example/normal.png" id="2_m823o"]
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ahwsh"]
-transparency = 1
-albedo_texture = ExtResource("1_5umgk")
-normal_enabled = true
-normal_texture = ExtResource("2_m823o")
-uv1_scale = Vector3(15, 1, 1)
-
-[sub_resource type="Curve3D" id="Curve3D_najty"]
-bake_interval = 0.5
-_data = {
-"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 0.0200081, -0.00185585, 0.0280789, -3.76831, 0.0247717, 1.6516, 3.76831, -0.0247717, -1.6516, 7.33553, 2.54566, -4.9224, -1.43631, 1.2336, -1.67177, 1.43631, -1.2336, 1.67177, 15.9896, 0.512747, -3.67575, 0, 0, 0, 0, 0, 0, 16.0472, -4.18121, 4.85333),
-"tilts": PackedFloat32Array(0, 0, -0.101573, 0)
-}
-point_count = 4
+[gd_scene load_steps=7 format=3 uid="uid://duuj8y4ltnxx4"]
 
 [sub_resource type="Environment" id="Environment_d64m3"]
 background_mode = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pwhxc"]
+albedo_color = Color(0.0470588, 0.286275, 0.431373, 1)
 
 [sub_resource type="BoxMesh" id="BoxMesh_vmflo"]
 size = Vector3(50, 1, 50)
@@ -34,18 +19,17 @@ _data = {
 }
 point_count = 2
 
+[sub_resource type="Curve3D" id="Curve3D_aab18"]
+_data = {
+"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 0.301943, 0.00188065, -0.105051, -2.02094, -0.0855765, 0.0303774, 2.02094, 0.0855765, -0.0303774, 4.16931, 0.388426, -1.12774, 0, 0, 0, 0, 0, 0, 7.14323, -0.606742, -1.18155, 0, 0, 0, 0, 0, 0, 7.77967, -2.15524, 0.0646367),
+"tilts": PackedFloat32Array(0, 0, 0, 0)
+}
+point_count = 4
+
 [node name="Node3D" type="Node3D"]
 
 [node name="StaticBody3D" type="StaticBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.938075, -0.642521, 0.163372)
-
-[node name="Rope3D" type="Rope3D" parent="."]
-rope_num_segments = 20
-rope_node_a = NodePath("../StaticBody3D")
-rope_joint_bias = 0.0
-geometry_material = SubResource("StandardMaterial3D_ahwsh")
-transform = Transform3D(0.999996, 0, -0.00284488, 0, 1, 0, 0.00284488, 0, 0.999996, -0.855135, -0.742191, 0)
-curve = SubResource("Curve3D_najty")
 
 [node name="Camera3D" type="Camera3D" parent="."]
 transform = Transform3D(0.989513, -3.68622e-09, -0.144443, 0.0204445, 0.989932, 0.140056, 0.142988, -0.141541, 0.979551, 0, 0.437206, 11.7303)
@@ -58,16 +42,23 @@ shadow_enabled = true
 environment = SubResource("Environment_d64m3")
 
 [node name="StaticBody3D2" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -4.42083, 0)
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="StaticBody3D2"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -8.87429, 0)
+material_override = SubResource("StandardMaterial3D_pwhxc")
 mesh = SubResource("BoxMesh_vmflo")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D2"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -8.87429, 0)
 shape = SubResource("ConcavePolygonShape3D_yfs2j")
 
 [node name="Rope3D2" type="Rope3D" parent="."]
-rope_node_a = NodePath("../StaticBody3D")
+rope_num_segments = 20
+rope_node_b = NodePath("../StaticBody3D")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.54762, 4.04986, 0.424549)
 curve = SubResource("Curve3D_wmxad")
+
+[node name="Rope3D3" type="Rope3D" parent="."]
+rope_num_segments = 20
+rope_node_b = NodePath("../StaticBody3D")
+transform = Transform3D(0.993001, 0, -0.118109, 0, 1, 0, 0.118109, 0, 0.993001, 0.992783, 1.74194, 0.424549)
+curve = SubResource("Curve3D_aab18")
