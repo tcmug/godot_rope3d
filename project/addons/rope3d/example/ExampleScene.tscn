@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://duuj8y4ltnxx4"]
+[gd_scene load_steps=9 format=3 uid="uid://duuj8y4ltnxx4"]
 
 [sub_resource type="Environment" id="Environment_d64m3"]
 background_mode = 1
@@ -21,10 +21,14 @@ point_count = 2
 
 [sub_resource type="Curve3D" id="Curve3D_aab18"]
 _data = {
-"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 0.301943, 0.00188065, -0.105051, -2.02094, -0.0855765, 0.0303774, 2.02094, 0.0855765, -0.0303774, 4.16931, 0.388426, -1.12774, 0, 0, 0, 0, 0, 0, 7.14323, -0.606742, -1.18155, 0, 0, 0, 0, 0, 0, 7.77967, -2.15524, 0.0646367),
-"tilts": PackedFloat32Array(0, 0, 0, 0)
+"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 0.301943, 0.00188065, -0.105051, -2.02094, -0.0855765, 0.0303774, 2.02094, 0.0855765, -0.0303774, 4.16931, 0.388426, -1.12774, 0, 0, 0, 0, 0, 0, 7.14323, -0.606742, -1.18155),
+"tilts": PackedFloat32Array(0, 0, 0)
 }
-point_count = 4
+point_count = 3
+
+[sub_resource type="BoxMesh" id="BoxMesh_a4jjn"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_c40jo"]
 
 [node name="Node3D" type="Node3D"]
 
@@ -59,7 +63,41 @@ curve = SubResource("Curve3D_wmxad")
 
 [node name="Rope3D3" type="Rope3D" parent="."]
 rope_max_segments = 10
+rope_node_a = NodePath("../RigidBody3D2")
 rope_node_b = NodePath("../StaticBody3D")
 rope_segment_mass = 0.145
-transform = Transform3D(0.993001, 0, -0.118109, 0, 1, 0, 0.118109, 0, 0.993001, 0.992783, 7.19136, 0.424549)
+transform = Transform3D(0.993001, 0, -0.118109, 0, 1, 0, 0.118109, 0, 0.993001, 0.992783, 5.74243, 0.424549)
 curve = SubResource("Curve3D_aab18")
+
+[node name="RigidBody3D" type="RigidBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.76243, -3.18305, 0)
+metadata/_edit_group_ = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="RigidBody3D"]
+mesh = SubResource("BoxMesh_a4jjn")
+skeleton = NodePath("../..")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RigidBody3D"]
+shape = SubResource("BoxShape3D_c40jo")
+
+[node name="RigidBody3D3" type="RigidBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.76243, -2.07136, 0)
+metadata/_edit_group_ = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="RigidBody3D3"]
+mesh = SubResource("BoxMesh_a4jjn")
+skeleton = NodePath("../..")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RigidBody3D3"]
+shape = SubResource("BoxShape3D_c40jo")
+
+[node name="RigidBody3D2" type="RigidBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.592071, 5.7923, 0.389557)
+metadata/_edit_group_ = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="RigidBody3D2"]
+mesh = SubResource("BoxMesh_a4jjn")
+skeleton = NodePath("../..")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RigidBody3D2"]
+shape = SubResource("BoxShape3D_c40jo")
