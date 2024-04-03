@@ -36,16 +36,16 @@ void Rope3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_rope_node_b"), &Rope3D::get_rope_node_b);
 
 	ClassDB::bind_method(D_METHOD("set_rope_width", "value"), &Rope3D::set_rope_width);
-	ClassDB::bind_method(D_METHOD("set_rope_num_segments", "value"), &Rope3D::set_rope_num_segments);
-	ClassDB::bind_method(D_METHOD("set_rope_joint_bias", "value"), &Rope3D::set_rope_joint_bias);
-	ClassDB::bind_method(D_METHOD("set_rope_joint_damping", "value"), &Rope3D::set_rope_joint_damping);
-	ClassDB::bind_method(D_METHOD("set_rope_joint_impulse_clamp", "value"), &Rope3D::set_rope_joint_impulse_clamp);
+	ClassDB::bind_method(D_METHOD("set_rope_segment_length", "value"), &Rope3D::set_rope_segment_length);
+	ClassDB::bind_method(D_METHOD("set_rope_max_segments", "value"), &Rope3D::set_rope_max_segments);
+	ClassDB::bind_method(D_METHOD("set_rope_segment_mass", "value"), &Rope3D::set_rope_segment_mass);
+	ClassDB::bind_method(D_METHOD("set_rope_segment_angular_damp", "value"), &Rope3D::set_rope_segment_angular_damp);
 
 	ClassDB::bind_method(D_METHOD("get_rope_width"), &Rope3D::get_rope_width);
-	ClassDB::bind_method(D_METHOD("get_rope_num_segments"), &Rope3D::get_rope_num_segments);
-	ClassDB::bind_method(D_METHOD("get_rope_joint_bias"), &Rope3D::get_rope_joint_bias);
-	ClassDB::bind_method(D_METHOD("get_rope_joint_damping"), &Rope3D::get_rope_joint_damping);
-	ClassDB::bind_method(D_METHOD("get_rope_joint_impulse_clamp"), &Rope3D::get_rope_joint_impulse_clamp);
+	ClassDB::bind_method(D_METHOD("get_rope_segment_length"), &Rope3D::get_rope_segment_length);
+	ClassDB::bind_method(D_METHOD("get_rope_max_segments"), &Rope3D::get_rope_max_segments);
+	ClassDB::bind_method(D_METHOD("get_rope_segment_mass"), &Rope3D::get_rope_segment_mass);
+	ClassDB::bind_method(D_METHOD("get_rope_segment_angular_damp"), &Rope3D::get_rope_segment_angular_damp);
 
 	ClassDB::bind_method(D_METHOD("set_material", "new_material"), &Rope3D::set_material);
 	ClassDB::bind_method(D_METHOD("get_material"), &Rope3D::get_material);
@@ -56,13 +56,12 @@ void Rope3D::_bind_methods() {
 
 	ADD_GROUP("Rope", "rope_");
 	ClassDB::add_property("Rope3D", PropertyInfo(Variant::FLOAT, "rope_width"), "set_rope_width", "get_rope_width");
-	ClassDB::add_property("Rope3D", PropertyInfo(Variant::INT, "rope_num_segments", PROPERTY_HINT_RANGE, "1,20,1"), "set_rope_num_segments", "get_rope_num_segments");
+	ClassDB::add_property("Rope3D", PropertyInfo(Variant::FLOAT, "rope_segment_length"), "set_rope_segment_length", "get_rope_segment_length");
+	ClassDB::add_property("Rope3D", PropertyInfo(Variant::INT, "rope_max_segments", PROPERTY_HINT_RANGE, "1,20,1"), "set_rope_max_segments", "get_rope_max_segments");
 	ClassDB::add_property("Rope3D", PropertyInfo(Variant::NODE_PATH, "rope_node_a", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "PhysicsBody3D"), "set_rope_node_a", "get_rope_node_a");
 	ClassDB::add_property("Rope3D", PropertyInfo(Variant::NODE_PATH, "rope_node_b", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "PhysicsBody3D"), "set_rope_node_b", "get_rope_node_b");
-
-	ClassDB::add_property("Rope3D", PropertyInfo(Variant::FLOAT, "rope_joint_bias"), "set_rope_joint_bias", "get_rope_joint_bias");
-	ClassDB::add_property("Rope3D", PropertyInfo(Variant::FLOAT, "rope_joint_damping"), "set_rope_joint_damping", "get_rope_joint_damping");
-	ClassDB::add_property("Rope3D", PropertyInfo(Variant::FLOAT, "rope_joint_impulse_clamp"), "set_rope_joint_impulse_clamp", "get_rope_joint_impulse_clamp");
+	ClassDB::add_property("Rope3D", PropertyInfo(Variant::FLOAT, "rope_segment_mass"), "set_rope_segment_mass", "get_rope_segment_mass");
+	ClassDB::add_property("Rope3D", PropertyInfo(Variant::FLOAT, "rope_segment_angular_damp"), "set_rope_segment_angular_damp", "get_rope_segment_angular_damp");
 
 	ADD_GROUP("Geometry", "geometry_");
 	ClassDB::add_property("Rope3D", PropertyInfo(Variant::OBJECT, "geometry_material", PROPERTY_HINT_RESOURCE_TYPE, "Material"), "set_material", "get_material");
@@ -72,26 +71,20 @@ Rope3D::Rope3D() {
 	collision_layer = 1;
 	collision_mask = 1;
 
-	rope_num_segments = 5;
-	rope_width = 0.05;
-	rope_joint_bias = 0.3;
-	rope_joint_damping = 1.0;
-	rope_joint_impulse_clamp = 0.0;
+	rope_width = 0.1;
+	rope_segment_angular_damp = 50.0;
 	rope_segment_mass = 0.1;
+	rope_segment_length = 0.2;
+	rope_max_segments = 5;
+
 	is_created = false;
 	mesh_instance = nullptr;
-
-	rope_num_segments = 5;
 }
 
 Rope3D::~Rope3D() {
 }
 
 void Rope3D::_ready() {
-	// Uncomment to reset link and materials for debugging and crash avoidance.
-	// rope_end = NodePath();
-	// material = Ref<Material>(nullptr);
-	// Before spawning the mesh, need to figure out which end OWNs the mesh?
 	if (Engine::get_singleton()->is_editor_hint()) {
 		set_process(false);
 	}
@@ -113,43 +106,44 @@ NodePath Rope3D::get_rope_node_b() const {
 	return rope_node_b;
 }
 
-void Rope3D::set_rope_num_segments(int value) {
-	rope_num_segments = value;
+real_t Rope3D::get_rope_segment_length() const {
+	return rope_segment_length;
 }
 
-int Rope3D::get_rope_num_segments() const {
-	return rope_num_segments;
-}
-void Rope3D::set_rope_width(real_t value) {
-	rope_width = value;
+real_t Rope3D::get_rope_segment_mass() const {
+	return rope_segment_mass;
 }
 
-void Rope3D::set_rope_joint_bias(real_t value) {
-	rope_joint_bias = value;
-}
-
-void Rope3D::set_rope_joint_damping(real_t value) {
-	rope_joint_damping = value;
-}
-
-void Rope3D::set_rope_joint_impulse_clamp(real_t value) {
-	rope_joint_impulse_clamp = value;
+int Rope3D::get_rope_max_segments() const {
+	return rope_max_segments;
 }
 
 real_t Rope3D::get_rope_width() const {
 	return rope_width;
 }
 
-real_t Rope3D::get_rope_joint_bias() const {
-	return rope_joint_bias;
+void Rope3D::set_rope_segment_angular_damp(real_t value) {
+	rope_segment_angular_damp = value;
 }
 
-real_t Rope3D::get_rope_joint_damping() const {
-	return rope_joint_damping;
+void Rope3D::set_rope_segment_mass(real_t value) {
+	rope_segment_mass = value;
 }
 
-real_t Rope3D::get_rope_joint_impulse_clamp() const {
-	return rope_joint_impulse_clamp;
+void Rope3D::set_rope_segment_length(real_t value) {
+	rope_segment_length = value;
+}
+
+void Rope3D::set_rope_max_segments(int value) {
+	rope_max_segments = value;
+}
+
+void Rope3D::set_rope_width(real_t value) {
+	rope_width = value;
+}
+
+real_t Rope3D::get_rope_segment_angular_damp() const {
+	return rope_segment_angular_damp;
 }
 
 void Rope3D::set_collision_mask(int value) {
@@ -204,20 +198,9 @@ RigidBody3D *Rope3D::create_segment(const Vector3 &origin, const Vector3 &next, 
 	segment->add_child(tracker);
 
 	segment->add_child(shape);
+
 	segment->set_mass(rope_segment_mass);
-
-	// Set properties.
-	// TODO: Make these tweakable!
-	//segment->set_linear_damp(0.0);
-	//segment->set_angular_damp(20.0);
-	segment->set_collision_layer(collision_layer);
-	segment->set_collision_mask(collision_mask);
-
-	// Add under self, as top level object.
-	//add_child(segment);
-
-	// Align and orient segment.
-	//segment->look_at_from_position(origin, origin + direction, Vector3(0, 1, 0));
+	segment->set_angular_damp(rope_segment_angular_damp);
 
 	/*
 	TODO: Implement collision monitor later
@@ -243,9 +226,6 @@ Joint3D *Rope3D::create_pivot(const Vector3 &origin, const NodePath &a, const No
 	pivot->set_node_a(a);
 	pivot->set_node_b(b);
 
-	pivot->set_param(PinJoint3D::PARAM_BIAS, rope_joint_bias);
-	pivot->set_param(PinJoint3D::PARAM_DAMPING, rope_joint_damping);
-	pivot->set_param(PinJoint3D::PARAM_IMPULSE_CLAMP, rope_joint_impulse_clamp);
 	/*
 	  pivot->set_flag_x(Generic6DOFJoint3D::FLAG_ENABLE_ANGULAR_LIMIT, false);
 	  pivot->set_flag_y(Generic6DOFJoint3D::FLAG_ENABLE_ANGULAR_LIMIT, false);
@@ -264,50 +244,39 @@ Joint3D *Rope3D::create_pivot(const Vector3 &origin, const NodePath &a, const No
 }
 
 void Rope3D::create_rope() {
-	//Vector3 point_a = get_global_transform().origin;
-	//Vector3 point_b = target->get_global_transform().origin;
-	// Create points that make up the rope.
 	Curve3D *curve = get_curve().ptr();
 	PhysicsBody3D *node_a = Object::cast_to<PhysicsBody3D>(get_node_or_null(rope_node_a));
 	PhysicsBody3D *node_b = Object::cast_to<PhysicsBody3D>(get_node_or_null(rope_node_b));
 	PhysicsBody3D *previous = node_a;
 
 	PhysicsBody3D *segment;
-	Vector3 next;
 
 	real_t rope_length = curve->get_baked_length();
-	real_t segment_length = rope_length / rope_num_segments;
+	real_t num_segments = min(rope_max_segments, round(rope_length / rope_segment_length)) + 1;
+	real_t segment_length = rope_length / num_segments;
 
-	for (int i = 0; i < rope_num_segments; i++) {
-		Vector3 origin = to_global(curve->sample_baked(i * segment_length));
-		bool last = i == rope_num_segments - 1;
+	Vector3 from = to_global(curve->sample_baked(0));
 
-		if (!last) {
-			next = to_global(curve->sample_baked((i + 1) * segment_length));
-		}
+	for (int i = 0; i < num_segments; i++) {
+		Vector3 to = to_global(curve->sample_baked((i + 1) * segment_length));
 
-		if (!last) {
-			segment = create_segment(origin, next, segment_length);
-			tracked_nodes.push_back(Object::cast_to<Node3D>(segment->get_child(0)));
-		} else {
-			tracked_nodes.push_back(Object::cast_to<Node3D>(previous->get_child(1)));
-			segment = node_b;
-			if (!node_b) {
-				previous = nullptr;
-			}
-		}
+		segment = create_segment(from, to, segment_length);
+		tracked_nodes.push_back(Object::cast_to<Node3D>(segment->get_child(0)));
 
 		if (previous) {
-			Joint3D *pivot = create_pivot(origin, previous->get_path(), segment->get_path());
-			//tracked_nodes.push_back(pivot);
+			create_pivot(from, previous->get_path(), segment->get_path());
 		}
 
+		from = to;
 		previous = segment;
 	}
 
-	// When cutting a rope, we know the segment, from the segment
-	// we can fetch the rope owner and pinjoints that make up the point.
-	// copy material and other properties & construct a new rope simply from the points.
+	// Create last segment and a joint if there is something we're attached to.
+	tracked_nodes.push_back(Object::cast_to<Node3D>(previous->get_child(1)));
+	segment = node_b;
+	if (node_b) {
+		create_pivot(from, previous->get_path(), segment->get_path());
+	}
 
 	initialize_geometry();
 	UtilityFunctions::print("Rope created.");

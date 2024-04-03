@@ -23,13 +23,12 @@ private:
 	NodePath rope_node_a;
 	NodePath rope_node_b;
 
-	int rope_num_segments;
-
+	real_t rope_segment_length;
+	int rope_max_segments;
 	real_t rope_width;
-	real_t rope_joint_bias;
-	real_t rope_joint_damping;
-	real_t rope_joint_impulse_clamp;
 	real_t rope_segment_mass;
+	real_t rope_segment_angular_damp;
+
 	// Mesh:
 	Ref<Material> material;
 	MeshInstance3D *mesh_instance;
@@ -68,17 +67,17 @@ public:
 	NodePath get_rope_node_a() const;
 	NodePath get_rope_node_b() const;
 
-	void set_rope_num_segments(int value);
+	void set_rope_segment_length(real_t value);
+	void set_rope_max_segments(int value);
 	void set_rope_width(real_t value);
-	void set_rope_joint_bias(real_t value);
-	void set_rope_joint_damping(real_t value);
-	void set_rope_joint_impulse_clamp(real_t value);
+	void set_rope_segment_mass(real_t value);
+	void set_rope_segment_angular_damp(real_t value);
 
-	int get_rope_num_segments() const;
+	real_t get_rope_segment_length() const;
+	int get_rope_max_segments() const;
 	real_t get_rope_width() const;
-	real_t get_rope_joint_bias() const;
-	real_t get_rope_joint_damping() const;
-	real_t get_rope_joint_impulse_clamp() const;
+	real_t get_rope_segment_mass() const;
+	real_t get_rope_segment_angular_damp() const;
 
 	Ref<Material> get_material() const;
 	void set_material(const Ref<Material> material);

@@ -52,13 +52,14 @@ mesh = SubResource("BoxMesh_vmflo")
 shape = SubResource("ConcavePolygonShape3D_yfs2j")
 
 [node name="Rope3D2" type="Rope3D" parent="."]
-rope_num_segments = 20
+rope_max_segments = 10
 rope_node_b = NodePath("../StaticBody3D")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.54762, 4.04986, 0.424549)
 curve = SubResource("Curve3D_wmxad")
 
 [node name="Rope3D3" type="Rope3D" parent="."]
-rope_num_segments = 20
+rope_max_segments = 10
 rope_node_b = NodePath("../StaticBody3D")
-transform = Transform3D(0.993001, 0, -0.118109, 0, 1, 0, 0.118109, 0, 0.993001, 0.992783, 1.74194, 0.424549)
+rope_segment_mass = 0.145
+transform = Transform3D(0.993001, 0, -0.118109, 0, 1, 0, 0.118109, 0, 0.993001, 0.992783, 7.19136, 0.424549)
 curve = SubResource("Curve3D_aab18")
